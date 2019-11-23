@@ -2,7 +2,7 @@
 
 import hashlib
 import time
-import setup
+import sys
 
 
 
@@ -34,19 +34,23 @@ def proof_of_work(data_block, difficulty_bits, number_of_workers, worker_id):
 
 if __name__ == '__main__':
 	
-    difficulty_bits = int(input("Please enter number of difficulty bits: "))
+    if len(sys.argv) != 5:
+        print("ERROR: Invalid Number of Arguments")
+    else:
+        data_block = sys.argv[1]
+        difficulty_bits = int(sys.argv[2])
+        number_of_workers = int(sys.argv[3])
+        worker_id = int(sys.argv[4])
 
-    print("Finding Golden Nonce...")
+        print("Finding Golden Nonce...")
 
-    data_block = "COMSM0010cloud"
+        start_time = time.time()
 
-    start_time = time.time()
+        proof_of_work(data_block, difficulty_bits, number_of_workers, worker_id)
 
-    proof_of_work(data_block, difficulty_bits, 1, 0)
-    
-    end_time = time.time()
+        end_time = time.time()
 
-    elapsed_time = end_time - start_time
+        elapsed_time = end_time - start_time
 
-    print(f"Discovery Time = {elapsed_time:.3f}s")
-    print()
+        print(f"Discovery Time = {elapsed_time:.3f}s")
+        print()
