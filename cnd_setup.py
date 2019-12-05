@@ -1,4 +1,4 @@
-# Create AWS EC2 instance to run Proof-of-Work program.
+# Create AWS EC2 instances to run nonce discovery program.
 
 import boto3
 import time
@@ -6,12 +6,19 @@ import keyboard
 import sys
 
 
+### CHANGE THESE PARAMETERS:
+### -------------------------------
+BUCKET_NAME = 'fh16413-cnd-output'
+AMI_ID = 'ami-066be3e4e7954399c'
+### -------------------------------
+
 ec2 = boto3.resource('ec2')
 s3 = boto3.resource('s3')
 lam = boto3.client('lambda')
 
-bucket = s3.Bucket('fh16413-pow-bucket')
+bucket = s3.Bucket(BUCKET_NAME)
 output_file = "output1"
+data_block = "COMSM0010cloud"
 
 
 def clear_results():
@@ -26,12 +33,13 @@ def start_instances(D, N):
     for i in range(N):
 
         init_script = """#!/bin/bash
-    python36 /home/ec2-user/pow.py COMSM0010cloud """ + str(D) + """ """ + str(N) + """ """ + str(i) + """ > /home/ec2-user/""" + output_file + """
-    aws s3 cp /home/ec2-user/""" + output_file + """ s3://fh16413-pow-bucket/""" + output_file + """ """
+    cd /home/ec2-user/
+    python36 pow.py """ + data_block + """ """ + str(D) + """ """ + str(N) + """ """ + str(i) + """ > """ + output_file + """
+    aws s3 cp """ + output_file + """ s3://""" + BUCKET_NAME + """/""" + output_file + """ """
 
         # Create a new EC2 instance
         instances = ec2.create_instances(
-            ImageId='ami-0f71ebaa4f17666df',
+            ImageId=AMI_ID,
             MinCount=1,
             MaxCount=1,
             InstanceType='t2.micro',
@@ -44,13 +52,13 @@ def start_instances(D, N):
                     'ResourceType': 'instance',
                     'Tags': [
                         {
-                            'Key': 'powAutoOff',
+                            'Key': 'CNDAutoOff',
                             'Value': 'True'
                         }
                     ]
                 }
             ],
-            UserData=init_script # file to run on instance init.
+            UserData=init_script # commands to run on instance initialisation.
         )
 
 
@@ -59,10 +67,11 @@ def print_results():
     output_found = False
 
     while not output_found:
+        
         objs = list(bucket.objects.filter(Prefix=output_file))
         if len(objs) > 0 and objs[0].key == output_file:
-            print("Result Found!")
             print()
+            print("***RESULT FOUND***")
             body = objs[0].get()['Body'].read().decode('utf-8') 
             print(body)
             output_found = True
@@ -71,7 +80,7 @@ def print_results():
             print()
             print("Are you sure you want to initiate a scram? [y/N]")
             print("WARNING: This will end the current search.")
-            sys.stdout.flush()
+
             scram = input()
             if 'y' in scram:
                 print()
@@ -92,8 +101,8 @@ if __name__ == '__main__':
     print("WECLOME TO FINN'S CLOUD NONCE DISCOVERY SYSTEM")
     print()
     
-    difficulty_bits = int(input("Please enter the number of difficulty bits you would like: "))
-    N_instances = int(input("Please enter the number of EC2 instances you would like to split the work between: "))
+    difficulty_bits = int(input("Please enter the number of difficulty bits (leading zeros) you would like to achieve: "))
+    N_instances = int(input("Please enter the number of workers (cloud instances) you would like to split the work between: "))
 
     print()
     print("Starting Cloud Instances...")
