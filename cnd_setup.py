@@ -7,10 +7,11 @@ import sys
 import math
 
 
-### CHANGE THESE PARAMETERS:
+### CHANGE THIS PARAMETER TO YOUR PRIVATE BUCKET:
 ### -------------------------------
 BUCKET_NAME = 'fh16413-cnd-output'
-AMI_ID = 'ami-066be3e4e7954399c'
+S3_ACCESS_ROLE = 'S3-Access'
+LAMBDA_NAME = 'shutdownInstances'
 ### -------------------------------
 
 ec2 = boto3.resource('ec2')
@@ -18,6 +19,7 @@ s3 = boto3.resource('s3')
 lam = boto3.client('lambda')
 
 bucket = s3.Bucket(BUCKET_NAME)
+ami_id = 'ami-066be3e4e7954399c'
 output_file = "output1"
 data_block = "COMSM0010cloud"
 
@@ -51,13 +53,13 @@ def start_instances(D, N):
 
         # Create a new EC2 instance
         instances = ec2.create_instances(
-            ImageId=AMI_ID,
+            ImageId=ami_id,
             MinCount=1,
             MaxCount=1,
             InstanceType='t2.micro',
             #KeyName='ec2-keypair',
             IamInstanceProfile={
-                'Name': 'S3-Access'
+                'Name': S3_ACCESS_ROLE
             },
             TagSpecifications=[
                 {
@@ -98,7 +100,7 @@ def print_results():
                 print()
                 print("Scram initiated. Shutting down instances...")
                 lam.invoke(
-                    FunctionName='shutdownInstances',
+                    FunctionName=LAMBDA_NAME,
                     InvocationType='Event'
                 )
                 break
