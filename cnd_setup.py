@@ -4,6 +4,7 @@ import boto3
 import time
 import keyboard
 import sys
+import math
 
 
 ### CHANGE THESE PARAMETERS:
@@ -19,6 +20,17 @@ lam = boto3.client('lambda')
 bucket = s3.Bucket(BUCKET_NAME)
 output_file = "output1"
 data_block = "COMSM0010cloud"
+
+
+def calculate_N(D, T, L):
+    S = 35
+    Y = 250000
+
+    N = - (math.log(1-L)/(math.pow(0.5, D)*(T-S)*Y))
+    
+    N = int(math.ceil(N))
+
+    return N
 
 
 def clear_results():
@@ -43,7 +55,7 @@ def start_instances(D, N):
             MinCount=1,
             MaxCount=1,
             InstanceType='t2.micro',
-            KeyName='ec2-keypair',
+            #KeyName='ec2-keypair',
             IamInstanceProfile={
                 'Name': 'S3-Access'
             },
@@ -101,11 +113,19 @@ if __name__ == '__main__':
     print("WECLOME TO FINN'S CLOUD NONCE DISCOVERY SYSTEM")
     print()
     
-    difficulty_bits = int(input("Please enter the number of difficulty bits (leading zeros) you would like to achieve: "))
-    N_instances = int(input("Please enter the number of workers (cloud instances) you would like to split the work between: "))
+    difficulty_bits = int(input("Please enter the difficulty level (number of leading zeros) you would like: "))
+    
+    ### INPUT FOR INDIRECT SPECIFICATION OF N
+    max_runtime = float(input("Please enter a desired maximum discovery time (minimum of 40 seconds): "))
+    confidence = float(input("Please enter a desired confidence for this discovery time (decimal between 0 and 1): "))
+
+    N_instances = calculate_N(difficulty_bits, max_runtime, confidence)
+
+    ### INPUT FOR DIRECT SPECIFICATION OF N
+    #N_instances = int(input("Please enter the number of workers (cloud instances) you would like to split the work between: "))
 
     print()
-    print("Starting Cloud Instances...")
+    print(f"Starting {N_instances} Cloud Instances...")
 
     start_time = time.time()
 
@@ -127,16 +147,3 @@ if __name__ == '__main__':
     print(f"Total Discovery Time = {elapsed_time:.3f}s")
     print()
 
-
-
-
-
-
-'''
-    INIT SCRIPT TO PRINT TO INDEX.HTML
-    sudo yum update -y
-    sudo yum install -y httpd24
-    service httpd start
-    chkconfig httpd on
-    echo """ + str(i) + """ > /var/www/html/index.html
-'''
